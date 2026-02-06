@@ -6,10 +6,9 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-  { href: '/transactions', label: 'Transactions', icon: '💳' },
+  { href: '/statistics', label: 'Home', icon: '🏠' },
   { href: '/accounts', label: 'Accounts', icon: '🏦' },
-  { href: '/statistics', label: 'Stats', icon: '📈' },
+  { href: '/transactions', label: 'Trans', icon: '💳' },
   { href: '/settings', label: 'Settings', icon: '⚙️' },
 ];
 
@@ -124,7 +123,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.slice(0, 4).map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
             <Link
@@ -143,22 +142,6 @@ export function Sidebar() {
           );
         })}
       </nav>
-
-      {/* Settings */}
-      <div className="p-3 border-t border-border">
-        <Link
-          href="/settings"
-          className={cn(
-            'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
-            pathname === '/settings'
-              ? 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
-              : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
-          )}
-        >
-          <span className="text-lg">⚙️</span>
-          <span className="font-medium">Settings</span>
-        </Link>
-      </div>
     </aside>
   );
 }
