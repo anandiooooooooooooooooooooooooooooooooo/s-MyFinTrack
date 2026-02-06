@@ -7,22 +7,18 @@ import { useEffect, useState } from 'react';
 
 const navItems = [
   { href: '/statistics', label: 'Home', icon: '🏠' },
+  { href: '/transactions', label: 'Transactions', icon: '💳' },
   { href: '/accounts', label: 'Accounts', icon: '🏦' },
-  { href: '/transactions', label: 'Trans', icon: '💳' },
   { href: '/settings', label: 'Settings', icon: '⚙️' },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth >= 768) {
-        setIsOpen(false);
-      }
     };
 
     checkMobile();
@@ -30,64 +26,19 @@ export function Sidebar() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Close sidebar when navigating on mobile
-  useEffect(() => {
-    if (isMobile) {
-      setIsOpen(false);
-    }
-  }, [pathname, isMobile]);
-
   // Mobile: Bottom Navigation Bar
   if (isMobile) {
     return (
       <>
         {/* Mobile Header */}
-        <header className="fixed top-0 left-0 right-0 h-14 bg-bg-secondary border-b border-border flex items-center justify-between px-4 z-50">
-          <h1 className="text-lg font-bold bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
-            FinTrack
+        <header className="fixed top-0 left-0 right-0 h-14 bg-bg-secondary/80 backdrop-blur-md border-b border-border/50 flex items-center justify-center px-4 z-50">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
+            Retire Early
           </h1>
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-2 hover:bg-bg-hover rounded-lg transition-colors"
-          >
-            <span className="text-xl">{isOpen ? '✕' : '☰'}</span>
-          </button>
         </header>
 
-        {/* Mobile Slide-out Menu */}
-        {isOpen && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/50 z-40 animate-fade-in"
-              onClick={() => setIsOpen(false)}
-            />
-            <aside className="fixed top-14 right-0 w-64 h-[calc(100vh-3.5rem)] bg-bg-secondary border-l border-border z-50 animate-slide-in-right">
-              <nav className="p-3 space-y-1">
-                {navItems.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        'flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
-                        isActive
-                          ? 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
-                          : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
-                      )}
-                    >
-                      <span className="text-xl">{item.icon}</span>
-                      <span className="font-medium">{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-            </aside>
-          </>
-        )}
-
         {/* Bottom Navigation Bar */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-bg-secondary border-t border-border flex items-center justify-around z-50 safe-area-bottom">
+        <nav className="fixed bottom-0 left-0 right-0 h-20 bg-bg-secondary/80 backdrop-blur-xl border-t border-border/50 flex items-center justify-around z-50 safe-area-bottom pb-2">
           {navItems.slice(0, 5).map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
             return (
@@ -95,14 +46,22 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-lg transition-all min-w-[60px]',
+                  'flex flex-col items-center justify-center gap-1 px-2 py-1 rounded-2xl transition-all duration-300 relative',
                   isActive
-                    ? 'text-accent-blue'
+                    ? 'text-accent-blue -translate-y-2'
                     : 'text-text-muted hover:text-text-primary'
                 )}
               >
-                <span className="text-xl">{item.icon}</span>
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <div className={cn("p-1.5 rounded-xl transition-all duration-300", isActive ? "bg-accent-blue/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "")}>
+                  <span className={cn("text-2xl transition-transform", isActive ? "scale-110" : "")}>{item.icon}</span>
+                </div>
+                <span className={cn("text-[10px] font-medium transition-opacity", isActive ? "text-accent-blue font-bold" : "opacity-80")}>
+                  {item.label}
+                </span>
+
+                {isActive && (
+                    <span className="absolute -bottom-1 w-1 h-1 bg-accent-blue rounded-full" />
+                )}
               </Link>
             );
           })}
@@ -113,16 +72,16 @@ export function Sidebar() {
 
   // Desktop: Regular Sidebar
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-bg-secondary border-r border-border flex flex-col z-40">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-bg-secondary/50 backdrop-blur-xl border-r border-border flex flex-col z-40">
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 border-b border-border">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
-          FinTrack
+      <div className="h-20 flex items-center px-6 border-b border-border/50">
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-accent-blue via-accent-purple to-accent-purple bg-clip-text text-transparent">
+          Retire Early
         </h1>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1">
+      <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
@@ -130,14 +89,20 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all',
+                'flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group',
                 isActive
-                  ? 'bg-accent-blue/10 text-accent-blue border border-accent-blue/20'
-                  : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                  ? 'bg-gradient-to-r from-accent-blue/10 to-accent-purple/5 text-accent-blue border border-accent-blue/20 shadow-[0_0_20px_rgba(59,130,246,0.15)]'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
               )}
             >
-              <span className="text-lg">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
+              <span className={`text-xl transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                {item.icon}
+              </span>
+              <span className="font-semibold tracking-wide">{item.label}</span>
+
+              {isActive && (
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent-blue shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+              )}
             </Link>
           );
         })}

@@ -1,15 +1,22 @@
 'use client';
 
-import { Header } from '@/components/layout';
 import { Modal } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency, formatDate, formatNumber, getToday, parseFormattedNumber } from '@/lib/utils';
 import type { Account, Category, Transaction, TransactionType } from '@/types';
 import { useEffect, useState } from 'react';
 
+const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+
+  // Date filters
+  const [filterDay, setFilterDay] = useState<number | null>(null);
+  const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
+  const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const supabase = createClient();
@@ -28,12 +35,36 @@ export default function TransactionsPage() {
 
   useEffect(() => {
     fetchTransactions();
-  }, []);
+  }, [filterDay, filterMonth, filterYear]);
+
+  const getDateRange = () => {
+    const year = filterYear;
+    const month = filterMonth;
+
+    if (filterDay !== null) {
+      // Specific day
+      const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(filterDay).padStart(2, '0')}`;
+      return { start: date, end: date };
+    } else {
+      // Whole month
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 0);
+      return {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0],
+      };
+    }
+  };
 
   const fetchTransactions = async () => {
+    setLoading(true);
+    const range = getDateRange();
+
     const { data } = await supabase
       .from('transactions')
       .select('*, category:categories(*), account:accounts(*)')
+      .gte('date', range.start)
+      .lte('date', range.end)
       .order('date', { ascending: false });
 
     setTransactions(data || []);
@@ -164,83 +195,134 @@ export default function TransactionsPage() {
 
   return (
     <>
-      <Header title="Transactions" />
 
-      <div className="p-6 space-y-6 animate-fade-in">
-        {/* Filters */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            {(['all', 'income', 'expense'] as const).map((type) => (
-              <button
-                key={type}
-                onClick={() => setFilter(type)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  filter === type
-                    ? 'bg-accent-blue text-white'
-                    : 'bg-bg-card text-text-secondary hover:bg-bg-hover'
-                }`}
-              >
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </button>
+
+      <div className="p-4 md:p-6 space-y-4 animate-fade-in">
+        {/* Date Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Day */}
+          <select
+            value={filterDay ?? ''}
+            onChange={(e) => setFilterDay(e.target.value ? parseInt(e.target.value) : null)}
+            className="input w-auto text-sm"
+          >
+            <option value="">All Days</option>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+              <option key={d} value={d}>{d}</option>
             ))}
-          </div>
-          <button onClick={openModal} className="btn btn-primary">
-            + Add Transaction
-          </button>
+          </select>
+
+          {/* Month */}
+          <select
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+            className="input w-auto text-sm"
+          >
+            {months.map((m, i) => (
+              <option key={m} value={i}>{m}</option>
+            ))}
+          </select>
+
+          {/* Year */}
+          <select
+            value={filterYear}
+            onChange={(e) => setFilterYear(parseInt(e.target.value))}
+            className="input w-auto text-sm"
+            size={1}
+          >
+            {Array.from({ length: 75 }, (_, i) => 2026 + i).map((y) => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex gap-2">
+          {/* Type filter */}
+          {(['all', 'income', 'expense'] as const).map((type) => (
+            <button
+              key={type}
+              onClick={() => setFilter(type)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                filter === type
+                  ? 'bg-accent-blue text-white'
+                  : 'bg-bg-card text-text-secondary hover:bg-bg-hover'
+              }`}
+            >
+              {type.charAt(0).toUpperCase() + type.slice(1)}
+            </button>
+          ))}
         </div>
 
         {/* Transaction List */}
         {Object.keys(groupedTransactions).length === 0 ? (
-          <div className="card text-center py-12">
-            <p className="text-text-secondary mb-4">No transactions found</p>
-            <button onClick={openModal} className="btn btn-primary">
+          <div className="card text-center py-16 border-dashed border-2 border-border/50 bg-bg-secondary/30">
+            <div className="text-4xl mb-4 opacity-50">📝</div>
+            <p className="text-text-secondary mb-6 text-lg font-medium">No transactions found</p>
+            <button onClick={openModal} className="btn btn-primary px-6 py-2.5 shadow-lg shadow-accent-blue/20">
               Add your first transaction
             </button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8 pb-20">
             {Object.entries(groupedTransactions).map(([date, txns]) => (
-              <div key={date}>
-                <h3 className="text-sm font-medium text-text-secondary mb-3">
-                  {formatDate(date, 'EEEE, dd MMMM yyyy')}
-                </h3>
-                <div className="card p-0 overflow-hidden">
-                  {txns.map((txn, idx) => (
+              <div key={date} className="animate-fade-in relative z-0">
+                <div className="sticky top-14 md:top-0 bg-bg-primary/95 backdrop-blur-md py-3 z-10 -mx-4 px-4 md:mx-0 md:px-0 border-b border-border/50 mb-4 flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">
+                    {formatDate(date, 'EEEE, dd MMMM yyyy')}
+                  </h3>
+                  <div className="h-px flex-1 bg-border/50"></div>
+                </div>
+
+                <div className="grid gap-3">
+                  {txns.map((txn) => (
                     <div
                       key={txn.id}
-                      className={`flex items-center justify-between p-4 hover:bg-bg-hover transition-colors ${
-                        idx !== txns.length - 1 ? 'border-b border-border' : ''
-                      }`}
+                      className="group flex items-center justify-between p-4 card hover:border-accent-blue/30 transition-all duration-300 hover:-translate-y-0.5"
                     >
                       <div className="flex items-center gap-4">
                         <div
-                          className="w-10 h-10 rounded-full flex items-center justify-center text-xl"
-                          style={{ backgroundColor: `${txn.category?.color}20` }}
+                          className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform duration-300 group-hover:scale-110 ring-1 ring-inset ring-white/5"
+                          style={{ backgroundColor: `${txn.category?.color || '#3f3f46'}20` }}
                         >
                           {txn.category?.icon || '📦'}
                         </div>
                         <div>
-                          <p className="font-medium">{txn.category?.name || 'Uncategorized'}</p>
-                          <p className="text-sm text-text-secondary">
-                            {txn.account?.name}
-                            {txn.description && ` • ${txn.description}`}
+                          <p className="font-semibold text-text-primary text-[15px] group-hover:text-accent-blue transition-colors">
+                            {txn.category?.name || 'Uncategorized'}
                           </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {txn.description && (
+                              <p className="text-xs text-text-muted font-medium bg-bg-secondary px-2 py-0.5 rounded-md max-w-[120px] md:max-w-none truncate border border-border/30">
+                                {txn.description}
+                              </p>
+                            )}
+                            <span className="text-[10px] text-text-muted md:hidden">• {txn.account?.name}</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4">
+
+                      <div className="flex flex-col items-end gap-1">
                         <p
-                          className={`font-semibold ${
-                            txn.type === 'income' ? 'text-accent-green' : 'text-accent-red'
+                          className={`font-bold text-[16px] tracking-tight ${
+                            txn.type === 'income' ? 'text-accent-green' : 'text-text-primary'
                           }`}
                         >
                           {txn.type === 'income' ? '+' : '-'}
                           {formatCurrency(txn.amount)}
                         </p>
+                        <div className="text-xs font-medium text-text-muted hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-bg-secondary rounded-full border border-border/50">
+                           {txn.account?.icon && <span>{txn.account.icon}</span>}
+                           <span>{txn.account?.name}</span>
+                        </div>
                         <button
-                          onClick={() => handleDelete(txn.id)}
-                          className="text-text-muted hover:text-accent-red transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(txn.id);
+                          }}
+                          className="md:opacity-0 group-hover:opacity-100 p-1.5 -mr-2 text-text-muted hover:text-accent-red hover:bg-accent-red/10 rounded-lg transition-all"
+                          title="Delete transaction"
                         >
-                          🗑️
+                          ✕
                         </button>
                       </div>
                     </div>
@@ -250,6 +332,7 @@ export default function TransactionsPage() {
             ))}
           </div>
         )}
+
 
         {/* Quick Add FAB */}
         <button onClick={openModal} className="fab">

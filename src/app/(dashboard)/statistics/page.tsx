@@ -1,8 +1,7 @@
 'use client';
 
-import { Header } from '@/components/layout';
 import { createClient } from '@/lib/supabase/client';
-import { calculatePercentage, formatCurrency, formatDate, getToday } from '@/lib/utils';
+import { calculatePercentage, formatCurrency, formatDate } from '@/lib/utils';
 import type { Account, AccountBalance, Category, Transaction } from '@/types';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -38,7 +37,7 @@ interface BudgetItem {
   percentage: number;
 }
 
-type ViewTab = 'overview' | 'stats' | 'budget';
+type ViewTab = 'overview' | 'stats';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<ViewTab>('overview');
@@ -166,7 +165,7 @@ export default function HomePage() {
 
   return (
     <>
-      <Header title="FinTrack" subtitle={formatDate(getToday(), 'EEEE, dd MMMM yyyy')} />
+
 
       <div className="p-4 md:p-6 space-y-4 animate-fade-in">
         {/* Tab Switcher */}
@@ -174,7 +173,6 @@ export default function HomePage() {
           {[
             { id: 'overview', label: '🏠 Home', icon: '🏠' },
             { id: 'stats', label: '📈 Stats', icon: '📈' },
-            { id: 'budget', label: '🎯 Budget', icon: '🎯' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -213,22 +211,29 @@ export default function HomePage() {
             </div>
 
             {/* Accounts */}
-            <div className="card">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="font-semibold">Accounts</h2>
-                <Link href="/accounts" className="text-accent-blue text-sm">View all</Link>
+            <div className="card bg-gradient-to-br from-bg-card to-bg-secondary/50">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-bold text-lg flex items-center gap-2">
+                  <span className="text-xl">🏦</span> Accounts
+                </h2>
+                <Link href="/accounts" className="text-accent-blue text-sm font-medium hover:underline flex items-center gap-1">
+                  View all <span className="text-xs">→</span>
+                </Link>
               </div>
               {accounts.length === 0 ? (
-                <p className="text-text-secondary text-center py-4">No accounts yet</p>
+                <p className="text-text-secondary text-center py-6 border border-dashed border-border/50 rounded-xl bg-bg-secondary/30">No accounts yet</p>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div className="flex flex-col gap-3">
                   {accounts.slice(0, 3).map(({ account, balance }) => (
-                    <div key={account.id} className="p-3 bg-bg-secondary rounded-lg">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span>{account.icon}</span>
-                        <span className="font-medium text-sm">{account.name}</span>
+                    <div key={account.id} className="p-3.5 bg-bg-primary/50 border border-border/50 rounded-xl flex items-center justify-between hover:border-accent-blue/20 transition-colors group">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl p-2 bg-bg-secondary rounded-lg group-hover:scale-110 transition-transform duration-300 shadow-inner">{account.icon}</span>
+                        <div>
+                          <span className="font-semibold block text-sm">{account.name}</span>
+                          <span className="text-xs text-text-muted capitalize">{account.type}</span>
+                        </div>
                       </div>
-                      <p className={`font-bold ${balance >= 0 ? 'text-text-primary' : 'text-accent-red'}`}>{formatCurrency(balance)}</p>
+                      <p className={`font-bold font-mono text-[15px] ${balance >= 0 ? 'text-text-primary' : 'text-accent-red'}`}>{formatCurrency(balance)}</p>
                     </div>
                   ))}
                 </div>
@@ -352,37 +357,6 @@ export default function HomePage() {
           </>
         )}
 
-        {activeTab === 'budget' && (
-          <>
-            {budgetItems.length === 0 ? (
-              <div className="card text-center py-8">
-                <p className="text-text-secondary mb-2">No budgets set</p>
-                <Link href="/settings" className="btn btn-primary">Manage Categories</Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {budgetItems.map(({ category, spent, percentage }) => (
-                  <div key={category.id} className="card p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span>{category.icon}</span>
-                        <span className="font-medium text-sm">{category.name}</span>
-                      </div>
-                      {percentage >= 80 && <span className={`text-xs ${getStatusColor(percentage)}`}>{percentage >= 100 ? '⚠️ Over' : '⚠️'}</span>}
-                    </div>
-                    <div className="h-2 bg-bg-secondary rounded-full overflow-hidden mb-2">
-                      <div className={`h-full rounded-full ${getBarColor(percentage)}`} style={{ width: `${Math.min(percentage, 100)}%` }} />
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-text-muted">{formatCurrency(spent)} / {formatCurrency(category.budget_limit || 0)}</span>
-                      <span className={getStatusColor(percentage)}>{percentage}%</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
       </div>
     </>
   );

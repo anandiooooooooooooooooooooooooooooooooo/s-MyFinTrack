@@ -1,6 +1,5 @@
 'use client';
 
-import { Header } from '@/components/layout';
 import { Modal } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { accountTypeIcons, formatCurrency, formatNumber, getAccountTypeLabel, parseFormattedNumber } from '@/lib/utils';
@@ -149,7 +148,7 @@ export default function AccountsPage() {
 
   return (
     <>
-      <Header title="Accounts" />
+
 
       <div className="p-6 space-y-6 animate-fade-in">
         {/* Total Balance Card */}

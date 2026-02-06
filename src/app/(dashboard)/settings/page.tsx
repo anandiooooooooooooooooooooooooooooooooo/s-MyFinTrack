@@ -1,6 +1,5 @@
 'use client';
 
-import { Header } from '@/components/layout';
 import { Modal } from '@/components/ui';
 import { createClient } from '@/lib/supabase/client';
 import { defaultCategoryColors, formatCurrency, formatNumber, parseFormattedNumber } from '@/lib/utils';
@@ -164,7 +163,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <Header title="Settings" />
+
 
       <div className="p-6 max-w-4xl space-y-6 animate-fade-in">
         {/* Account Info */}

@@ -1,27 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  /* Background */
-  --bg-primary: #0f0f14;
-  --bg-secondary: #16161d;
-  --bg-card: #1c1c26;
-  --bg-hover: #252532;
+  /* Background - Richer Dark Theme */
+  --bg-primary: #09090b;
+  /* Zinc-950 */
+  --bg-secondary: #121217;
+  /* Zinc-900 */
+  --bg-card: #18181b;
+  /* Zinc-900/50 */
+  --bg-hover: #27272a;
+  /* Zinc-800 */
 
   /* Text */
-  --text-primary: #f5f5f7;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-primary: #fafafa;
+  /* Zinc-50 */
+  --text-secondary: #a1a1aa;
+  /* Zinc-400 */
+  --text-muted: #71717a;
+  /* Zinc-500 */
 
-  /* Accent Colors */
-  --accent-green: #10b981;
-  --accent-red: #ef4444;
+  /* Brand Colors - Modern Vivid */
   --accent-blue: #3b82f6;
+  /* Blue-500 */
   --accent-purple: #8b5cf6;
+  /* Violet-500 */
+  --accent-green: #10b981;
+  /* Emerald-500 */
+  --accent-red: #ef4444;
+  /* Red-500 */
   --accent-yellow: #f59e0b;
+  /* Amber-500 */
   --accent-cyan: #06b6d4;
+  /* Cyan-500 */
 
-  /* Borders */
-  --border-color: #2a2a38;
+  /* Gradients */
+  --gradient-main: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --gradient-card: linear-gradient(180deg, rgba(39, 39, 42, 0.4) 0%, rgba(39, 39, 42, 0) 100%);
+
+  /* Borders & Effects */
+  --border-color: #27272a;
+  /* Zinc-800 */
+  --glass-bg: rgba(24, 24, 27, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 @theme inline {
@@ -47,70 +67,113 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: -0.015em;
+  /* Slightly tighter for modern feel */
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Custom scrollbar */
+/* Glassmorphism Utility */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+/* Custom scrollbar - Thinner & Cleaner */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
+  background: var(--bg-hover);
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a48;
+  background: var(--text-muted);
 }
 
-/* Card styles */
+/* Modern Card Styles */
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 16px;
+  /* Smooth large corners */
   padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle inner glow for cards */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: var(--gradient-card);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.card>* {
+  position: relative;
+  z-index: 1;
 }
 
 .card-hover {
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-hover:hover {
-  background: var(--bg-hover);
-  border-color: #3a3a48;
+  transform: translateY(-2px);
+  border-color: #3f3f46;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
 }
 
-/* Button styles */
+/* Button Refinements */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
+  letter-spacing: 0.01em;
+}
+
+.btn:active {
+  transform: scale(0.97);
 }
 
 .btn-primary {
   background: var(--accent-blue);
   color: white;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 .btn-primary:hover {
   background: #2563eb;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 .btn-success {
   background: var(--accent-green);
   color: white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .btn-success:hover {
@@ -120,6 +183,7 @@ body {
 .btn-danger {
   background: var(--accent-red);
   color: white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 .btn-danger:hover {
@@ -135,64 +199,81 @@ body {
 .btn-ghost:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 
-/* Input styles */
+/* Modern Input Fields */
 .input {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.875rem 1rem;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   color: var(--text-primary);
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   transition: all 0.2s ease;
 }
 
 .input:focus {
   outline: none;
   border-color: var(--accent-blue);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  background: var(--bg-primary);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+select.input {
+  max-height: 200px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem;
 }
 
 .input::placeholder {
   color: var(--text-muted);
 }
 
-/* Label styles */
+/* Labels & Typography */
 .label {
   display: block;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 0.5rem;
+  letter-spacing: 0.02em;
 }
 
-/* Badge styles */
+/* Badges */
 .badge {
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: 9999px;
+  letter-spacing: 0.02em;
 }
 
 .badge-income {
-  background: rgba(16, 185, 129, 0.1);
+  background: rgba(16, 185, 129, 0.15);
   color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .badge-expense {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.15);
   color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* Animation */
+/* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
 
   to {
@@ -202,73 +283,53 @@ body {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .animate-scale-in {
-  animation: scaleIn 0.2s ease-out;
+  animation: scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-  }
-
-  to {
-    transform: translateX(0);
-  }
-}
-
-.animate-slide-in-right {
-  animation: slideInRight 0.25s ease-out;
-}
-
-/* Safe area for iOS notch/bottom bar */
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}
-
-/* Floating Action Button */
+/* FAB - Premium Float */
 .fab {
   position: fixed;
-  bottom: 5.5rem;
-  /* Above mobile bottom nav */
-  right: 1rem;
-  width: 3.5rem;
-  height: 3.5rem;
-  background: var(--accent-blue);
+  bottom: 2rem;
+  right: 1.5rem;
+  width: 4rem;
+  height: 4rem;
+  background: var(--gradient-main);
   color: white;
-  border-radius: 50%;
+  border-radius: 24px;
+  /* Squircle */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4);
-  transition: all 0.2s ease;
+  font-size: 2rem;
+  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   cursor: pointer;
-  z-index: 40;
+  z-index: 50;
+  border: 2px solid rgba(255, 255, 255, 0.1);
 }
 
 @media (min-width: 768px) {
   .fab {
-    bottom: 2rem;
-    right: 2rem;
+    bottom: 2.5rem;
+    right: 2.5rem;
   }
 }
 
 .fab:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 25px rgba(59, 130, 246, 0.5);
+  transform: translateY(-4px) scale(1.05);
+  /* Float up effect */
+  box-shadow: 0 12px 40px rgba(59, 130, 246, 0.6);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* Mobile Nav Safe Area */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 20px);
 }
