@@ -160,7 +160,40 @@ export default function HomePage() {
   const getBarColor = (p: number) => p >= 100 ? 'bg-accent-red' : p >= 80 ? 'bg-accent-yellow' : 'bg-accent-green';
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen"><div className="text-text-secondary">Loading...</div></div>;
+    return (
+      <div className="p-4 md:p-6 space-y-4 animate-fade-in">
+        {/* Tab Skeleton */}
+        <div className="flex gap-2">
+          <div className="h-9 w-24 rounded-lg bg-bg-hover/50 animate-pulse" />
+          <div className="h-9 w-24 rounded-lg bg-bg-hover/50 animate-pulse" />
+        </div>
+        {/* Summary Cards Skeleton */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="card p-3 space-y-2">
+              <div className="h-3 w-1/3 rounded bg-bg-hover/50 animate-pulse" />
+              <div className="h-6 w-2/3 rounded bg-bg-hover/50 animate-pulse" />
+            </div>
+          ))}
+        </div>
+        {/* Accounts Card Skeleton */}
+        <div className="card p-4 space-y-3">
+          <div className="h-5 w-1/4 rounded bg-bg-hover/50 animate-pulse" />
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-2.5 bg-bg-primary/50 border border-border/50 rounded-xl">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-bg-hover/50 animate-pulse" />
+                <div className="space-y-1.5">
+                  <div className="h-4 w-20 rounded bg-bg-hover/50 animate-pulse" />
+                  <div className="h-3 w-12 rounded bg-bg-hover/50 animate-pulse" />
+                </div>
+              </div>
+              <div className="h-5 w-16 rounded bg-bg-hover/50 animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -189,51 +222,51 @@ export default function HomePage() {
         {activeTab === 'overview' && (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="card p-4">
-                <p className="text-text-secondary text-xs mb-1">Balance</p>
-                <p className={`text-lg md:text-xl font-bold ${totalBalance >= 0 ? 'text-text-primary' : 'text-accent-red'}`}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="card p-3">
+                <p className="text-text-secondary text-[11px] mb-0.5">Balance</p>
+                <p className={`text-base md:text-lg font-bold ${totalBalance >= 0 ? 'text-text-primary' : 'text-accent-red'}`}>
                   {formatCurrency(totalBalance)}
                 </p>
               </div>
-              <div className="card p-4">
-                <p className="text-text-secondary text-xs mb-1">Income</p>
-                <p className="text-lg md:text-xl font-bold text-accent-green">+{formatCurrency(monthlyStats.income)}</p>
+              <div className="card p-3">
+                <p className="text-text-secondary text-[11px] mb-0.5">Income</p>
+                <p className="text-base md:text-lg font-bold text-accent-green">+{formatCurrency(monthlyStats.income)}</p>
               </div>
-              <div className="card p-4">
-                <p className="text-text-secondary text-xs mb-1">Expense</p>
-                <p className="text-lg md:text-xl font-bold text-accent-red">-{formatCurrency(monthlyStats.expense)}</p>
+              <div className="card p-3">
+                <p className="text-text-secondary text-[11px] mb-0.5">Expense</p>
+                <p className="text-base md:text-lg font-bold text-accent-red">-{formatCurrency(monthlyStats.expense)}</p>
               </div>
-              <div className="card p-4">
-                <p className="text-text-secondary text-xs mb-1">Savings</p>
-                <p className={`text-lg md:text-xl font-bold ${savingsRate >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>{savingsRate}%</p>
+              <div className="card p-3">
+                <p className="text-text-secondary text-[11px] mb-0.5">Savings</p>
+                <p className={`text-base md:text-lg font-bold ${savingsRate >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>{savingsRate}%</p>
               </div>
             </div>
 
             {/* Accounts */}
-            <div className="card bg-gradient-to-br from-bg-card to-bg-secondary/50">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-bold text-lg flex items-center gap-2">
-                  <span className="text-xl">🏦</span> Accounts
+            <div className="card bg-gradient-to-br from-bg-card to-bg-secondary/50 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="font-bold text-base flex items-center gap-2">
+                  <span className="text-lg">🏦</span> Accounts
                 </h2>
-                <Link href="/accounts" className="text-accent-blue text-sm font-medium hover:underline flex items-center gap-1">
-                  View all <span className="text-xs">→</span>
+                <Link href="/accounts" className="text-accent-blue text-xs font-medium hover:underline flex items-center gap-1">
+                  View all <span className="text-[10px]">→</span>
                 </Link>
               </div>
               {accounts.length === 0 ? (
-                <p className="text-text-secondary text-center py-6 border border-dashed border-border/50 rounded-xl bg-bg-secondary/30">No accounts yet</p>
+                <p className="text-text-secondary text-center py-4 border border-dashed border-border/50 rounded-xl bg-bg-secondary/30 text-xs">No accounts yet</p>
               ) : (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                   {accounts.slice(0, 3).map(({ account, balance }) => (
-                    <div key={account.id} className="p-3.5 bg-bg-primary/50 border border-border/50 rounded-xl flex items-center justify-between hover:border-accent-blue/20 transition-colors group">
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl p-2 bg-bg-secondary rounded-lg group-hover:scale-110 transition-transform duration-300 shadow-inner">{account.icon}</span>
+                    <div key={account.id} className="p-2.5 bg-bg-primary/50 border border-border/50 rounded-xl flex items-center justify-between hover:border-accent-blue/20 transition-colors group">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl p-1.5 bg-bg-secondary rounded-lg group-hover:scale-110 transition-transform duration-300 shadow-inner">{account.icon}</span>
                         <div>
                           <span className="font-semibold block text-sm">{account.name}</span>
-                          <span className="text-xs text-text-muted capitalize">{account.type}</span>
+                          <span className="text-[10px] text-text-muted capitalize">{account.type}</span>
                         </div>
                       </div>
-                      <p className={`font-bold font-mono text-[15px] ${balance >= 0 ? 'text-text-primary' : 'text-accent-red'}`}>{formatCurrency(balance)}</p>
+                      <p className={`font-bold font-mono text-sm ${balance >= 0 ? 'text-text-primary' : 'text-accent-red'}`}>{formatCurrency(balance)}</p>
                     </div>
                   ))}
                 </div>

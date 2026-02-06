@@ -1,29 +1,76 @@
 'use client';
 
 import { Modal } from '@/components/ui';
+import { SkeletonCard, SkeletonTransactionItem } from '@/components/ui/Skeleton';
 import { createClient } from '@/lib/supabase/client';
 import { formatCurrency, formatDate, formatNumber, getToday, parseFormattedNumber } from '@/lib/utils';
 import type { Account, Category, Transaction, TransactionType } from '@/types';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 
 const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+interface CategoryStat {
+  name: string;
+  amount: number;
+  color: string;
+  icon: string;
+}
+
+interface MonthlyStat {
+  month: string;
+  income: number;
+  expense: number;
+}
+
+interface BudgetItem {
+  category: Category;
+  spent: number;
+  percentage: number;
+}
+
+type ViewTab = 'detail' | 'stats';
+
 export default function TransactionsPage() {
+  const searchParams = useSearchParams();
+  const activeTab = (searchParams.get('view') as ViewTab) || 'detail';
+
+  // -- Transactions / Detail State --
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Date filters
+  // Date filters (history tab)
   const [filterDay, setFilterDay] = useState<number | null>(null);
   const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
 
+  // -- Stats State --
+  // statsPeriod removed, using filterMonth/Year/Day
+  const [monthlyStats, setMonthlyStats] = useState({ income: 0, expense: 0 });
+  const [expenseByCategory, setExpenseByCategory] = useState<CategoryStat[]>([]);
+  const [monthlyData, setMonthlyData] = useState<MonthlyStat[]>([]);
+
+  // -- Shared / Form State --
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const supabase = createClient();
-
-  // Form state
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+
+  // Form Details
   const [formType, setFormType] = useState<TransactionType>('expense');
   const [formAmount, setFormAmount] = useState('');
   const [formDate, setFormDate] = useState(getToday());
@@ -33,20 +80,25 @@ export default function TransactionsPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState('');
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [filterDay, filterMonth, filterYear]);
+  const supabase = createClient();
 
+  useEffect(() => {
+    if (activeTab === 'detail') {
+      fetchTransactions();
+    } else {
+      fetchStats();
+    }
+  }, [activeTab, filterDay, filterMonth, filterYear]);
+
+  // --- Date Range Helper for History Tab ---
   const getDateRange = () => {
     const year = filterYear;
     const month = filterMonth;
 
     if (filterDay !== null) {
-      // Specific day
       const date = `${year}-${String(month + 1).padStart(2, '0')}-${String(filterDay).padStart(2, '0')}`;
       return { start: date, end: date };
     } else {
-      // Whole month
       const startDate = new Date(year, month, 1);
       const endDate = new Date(year, month + 1, 0);
       return {
@@ -68,6 +120,45 @@ export default function TransactionsPage() {
       .order('date', { ascending: false });
 
     setTransactions(data || []);
+    setLoading(false);
+  };
+
+  const fetchStats = async () => {
+    setLoading(true);
+    // Use the same date range as History
+    const { start, end } = getDateRange();
+
+    const { data: periodTxns } = await supabase
+      .from('transactions')
+      .select('*, category:categories(*)')
+      .gte('date', start)
+      .lte('date', end);
+
+    // Process Stats
+    let income = 0, expense = 0;
+    const categoryMap: Record<string, CategoryStat> = {};
+    const monthlyMap: Record<string, MonthlyStat> = {};
+
+    periodTxns?.forEach((txn) => {
+      if (txn.type === 'income') {
+        income += txn.amount;
+      } else {
+        expense += txn.amount;
+        const catName = txn.category?.name || 'Uncategorized';
+        if (!categoryMap[catName]) {
+          categoryMap[catName] = { name: catName, amount: 0, color: txn.category?.color || '#6b7280', icon: txn.category?.icon || '📦' };
+        }
+        categoryMap[catName].amount += txn.amount;
+      }
+      const monthKey = formatDate(txn.date, 'MMM yyyy');
+      if (!monthlyMap[monthKey]) monthlyMap[monthKey] = { month: monthKey, income: 0, expense: 0 };
+      if (txn.type === 'income') monthlyMap[monthKey].income += txn.amount;
+      else monthlyMap[monthKey].expense += txn.amount;
+    });
+
+    setMonthlyStats({ income, expense });
+    setExpenseByCategory(Object.values(categoryMap).sort((a, b) => b.amount - a.amount));
+    setMonthlyData(Object.values(monthlyMap));
     setLoading(false);
   };
 
@@ -158,7 +249,8 @@ export default function TransactionsPage() {
 
     setFormLoading(false);
     closeModal();
-    fetchTransactions();
+    if (activeTab === 'detail') fetchTransactions();
+    else fetchStats();
   };
 
   const handleDelete = async (id: string) => {
@@ -169,8 +261,17 @@ export default function TransactionsPage() {
   };
 
   const filteredTransactions = transactions.filter((txn) => {
-    if (filter === 'all') return true;
-    return txn.type === filter;
+    // Type filter
+    if (filter !== 'all' && txn.type !== filter) return false;
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesCategory = txn.category?.name?.toLowerCase().includes(query);
+      const matchesDescription = txn.description?.toLowerCase().includes(query);
+      const matchesAccount = txn.account?.name?.toLowerCase().includes(query);
+      return matchesCategory || matchesDescription || matchesAccount;
+    }
+    return true;
   });
 
   // Group transactions by date
@@ -185,154 +286,283 @@ export default function TransactionsPage() {
 
   const filteredCategories = categories.filter((c) => c.type === formType);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-text-secondary">Loading...</div>
-      </div>
-    );
-  }
-
   return (
     <>
+      <div className="p-4 md:p-6 space-y-4 animate-fade-in relative pb-24">
 
 
-      <div className="p-4 md:p-6 space-y-4 animate-fade-in">
-        {/* Date Filters */}
-        <div className="flex flex-wrap gap-2 items-center">
-          {/* Day */}
-          <select
-            value={filterDay ?? ''}
-            onChange={(e) => setFilterDay(e.target.value ? parseInt(e.target.value) : null)}
-            className="input w-auto text-sm"
-          >
-            <option value="">All Days</option>
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-
-          {/* Month */}
-          <select
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(parseInt(e.target.value))}
-            className="input w-auto text-sm"
-          >
-            {months.map((m, i) => (
-              <option key={m} value={i}>{m}</option>
-            ))}
-          </select>
-
-          {/* Year */}
-          <select
-            value={filterYear}
-            onChange={(e) => setFilterYear(parseInt(e.target.value))}
-            className="input w-auto text-sm"
-            size={1}
-          >
-            {Array.from({ length: 75 }, (_, i) => 2026 + i).map((y) => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex gap-2">
-          {/* Type filter */}
-          {(['all', 'income', 'expense'] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setFilter(type)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                filter === type
-                  ? 'bg-accent-blue text-white'
-                  : 'bg-bg-card text-text-secondary hover:bg-bg-hover'
-              }`}
-            >
-              {type.charAt(0).toUpperCase() + type.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        {/* Transaction List */}
-        {Object.keys(groupedTransactions).length === 0 ? (
-          <div className="card text-center py-16 border-dashed border-2 border-border/50 bg-bg-secondary/30">
-            <div className="text-4xl mb-4 opacity-50">📝</div>
-            <p className="text-text-secondary mb-6 text-lg font-medium">No transactions found</p>
-            <button onClick={openModal} className="btn btn-primary px-6 py-2.5 shadow-lg shadow-accent-blue/20">
-              Add your first transaction
-            </button>
+        {/* Segmented Control View Switcher */}
+        <div className="sticky top-0 z-20 bg-bg-primary/95 backdrop-blur-md -mx-4 px-4 py-3 md:static md:mx-0 md:px-0 md:bg-transparent border-b border-border/50 md:border-none flex justify-center">
+          <div className="bg-bg-secondary p-1 rounded-xl flex items-center border border-border/50 shadow-inner max-w-xs w-full">
+             <Link
+               href="/transactions?view=detail"
+               className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                 activeTab === 'detail'
+                   ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-border/50'
+                   : 'text-text-secondary hover:text-text-primary'
+               }`}
+             >
+               📝 History
+             </Link>
+             <Link
+               href="/transactions?view=stats"
+               className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                 activeTab === 'stats'
+                   ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-border/50'
+                   : 'text-text-secondary hover:text-text-primary'
+               }`}
+             >
+               📊 Statistics
+             </Link>
           </div>
-        ) : (
-          <div className="space-y-8 pb-20">
-            {Object.entries(groupedTransactions).map(([date, txns]) => (
-              <div key={date} className="animate-fade-in relative z-0">
-                <div className="sticky top-14 md:top-0 bg-bg-primary/95 backdrop-blur-md py-3 z-10 -mx-4 px-4 md:mx-0 md:px-0 border-b border-border/50 mb-4 flex items-center gap-2">
-                  <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider">
-                    {formatDate(date, 'EEEE, dd MMMM yyyy')}
-                  </h3>
-                  <div className="h-px flex-1 bg-border/50"></div>
-                </div>
+        </div>
 
-                <div className="grid gap-3">
-                  {txns.map((txn) => (
-                    <div
-                      key={txn.id}
-                      className="group flex items-center justify-between p-4 card hover:border-accent-blue/30 transition-all duration-300 hover:-translate-y-0.5"
-                    >
-                      <div className="flex items-center gap-4">
+        {/* Unified Date Filters */}
+        <div className="sticky top-14 md:top-0 z-10 bg-bg-primary/95 backdrop-blur-md -mx-4 px-4 py-3 md:mx-0 md:px-0 md:bg-transparent space-y-4 border-b border-border/50 md:border-none mt-0">
+          <div className="flex flex-col md:flex-row gap-2 md:items-center justify-between">
+            {/* Date Filters */}
+            <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(parseInt(e.target.value))}
+                className="input w-auto text-sm min-w-[100px]"
+              >
+                {months.map((m, i) => (
+                  <option key={m} value={i}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={filterYear}
+                onChange={(e) => setFilterYear(parseInt(e.target.value))}
+                className="input w-auto text-sm"
+              >
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+                <select
+                value={filterDay ?? ''}
+                onChange={(e) => setFilterDay(e.target.value ? parseInt(e.target.value) : null)}
+                className="input w-auto text-sm"
+              >
+                <option value="">All Days</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Type Filter (History Only) */}
+            {activeTab === 'detail' && (
+               <div className="flex gap-1 bg-bg-card p-1 rounded-lg self-start md:self-auto">
+                {(['all', 'income', 'expense'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setFilter(type)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                      filter === type
+                        ? 'bg-bg-hover text-text-primary shadow-sm'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                   {type.charAt(0).toUpperCase() + type.slice(1)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Search Bar (History Only) */}
+          {activeTab === 'detail' && (
+             <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">🔍</span>
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="input pl-9 pr-4"
+              />
+            </div>
+          )}
+        </div>
+
+        {activeTab === 'detail' && (
+          <div className="space-y-4 animate-fade-in">
+            {loading ? (
+              <div className="space-y-3 pt-2">
+                 {[...Array(5)].map((_, i) => <SkeletonTransactionItem key={i} />)}
+              </div>
+            ) : Object.keys(groupedTransactions).length === 0 ? (
+              <div className="card text-center py-16 border-dashed border-2 border-border/50 bg-bg-secondary/30">
+                <div className="text-4xl mb-4 opacity-50">📝</div>
+                <p className="text-text-secondary mb-6 text-lg font-medium">No transactions found</p>
+                <button onClick={openModal} className="btn btn-primary px-6 py-2.5 shadow-lg shadow-accent-blue/20">
+                  Add your first transaction
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(groupedTransactions).map(([date, txns]) => (
+                  <div key={date} className="animate-fade-in">
+                    <h3 className="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 pl-1 sticky top-40 md:static">
+                      {formatDate(date, 'EEEE, dd MMMM yyyy')}
+                    </h3>
+                    <div className="grid gap-2">
+                      {txns.map((txn) => (
                         <div
-                          className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shadow-inner transition-transform duration-300 group-hover:scale-110 ring-1 ring-inset ring-white/5"
-                          style={{ backgroundColor: `${txn.category?.color || '#3f3f46'}20` }}
+                          key={txn.id}
+                          className="group flex items-center justify-between p-3 card hover:border-accent-blue/30 transition-all duration-300 hover:-translate-y-0.5"
                         >
-                          {txn.category?.icon || '📦'}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-text-primary text-[15px] group-hover:text-accent-blue transition-colors">
-                            {txn.category?.name || 'Uncategorized'}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            {txn.description && (
-                              <p className="text-xs text-text-muted font-medium bg-bg-secondary px-2 py-0.5 rounded-md max-w-[120px] md:max-w-none truncate border border-border/30">
-                                {txn.description}
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-inner transition-transform duration-300 group-hover:scale-110 ring-1 ring-inset ring-white/5"
+                              style={{ backgroundColor: `${txn.category?.color || '#3f3f46'}20` }}
+                            >
+                              {txn.category?.icon || '📦'}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-text-primary text-sm group-hover:text-accent-blue transition-colors">
+                                {txn.category?.name || 'Uncategorized'}
                               </p>
-                            )}
-                            <span className="text-[10px] text-text-muted md:hidden">• {txn.account?.name}</span>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {txn.description && (
+                                  <p className="text-[11px] text-text-muted font-medium bg-bg-secondary px-1.5 py-0.5 rounded-md max-w-[100px] md:max-w-none truncate border border-border/30">
+                                    {txn.description}
+                                  </p>
+                                )}
+                                <span className="text-[10px] text-text-muted md:hidden">• {txn.account?.name}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-0.5">
+                            <p
+                              className={`font-bold text-[15px] tracking-tight ${
+                                txn.type === 'income' ? 'text-accent-green' : 'text-text-primary'
+                              }`}
+                            >
+                              {txn.type === 'income' ? '+' : '-'}
+                              {formatCurrency(txn.amount)}
+                            </p>
+                            <div className="text-[11px] font-medium text-text-muted hidden md:flex items-center gap-1 px-2 py-0.5 bg-bg-secondary rounded-full border border-border/50">
+                               {txn.account?.icon && <span>{txn.account.icon}</span>}
+                               <span>{txn.account?.name}</span>
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(txn.id);
+                              }}
+                              className="md:opacity-0 group-hover:opacity-100 p-1 -mr-1 text-text-muted hover:text-accent-red hover:bg-accent-red/10 rounded-lg transition-all"
+                              title="Delete transaction"
+                            >
+                              ✕
+                            </button>
                           </div>
                         </div>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1">
-                        <p
-                          className={`font-bold text-[16px] tracking-tight ${
-                            txn.type === 'income' ? 'text-accent-green' : 'text-text-primary'
-                          }`}
-                        >
-                          {txn.type === 'income' ? '+' : '-'}
-                          {formatCurrency(txn.amount)}
-                        </p>
-                        <div className="text-xs font-medium text-text-muted hidden md:flex items-center gap-1.5 px-2.5 py-1 bg-bg-secondary rounded-full border border-border/50">
-                           {txn.account?.icon && <span>{txn.account.icon}</span>}
-                           <span>{txn.account?.name}</span>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(txn.id);
-                          }}
-                          className="md:opacity-0 group-hover:opacity-100 p-1.5 -mr-2 text-text-muted hover:text-accent-red hover:bg-accent-red/10 rounded-lg transition-all"
-                          title="Delete transaction"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
 
+        {activeTab === 'stats' && (
+          <div className="space-y-4 animate-fade-in">
+            {loading ? (
+               <div className="grid grid-cols-1 gap-4">
+                 <SkeletonCard />
+                 <SkeletonCard />
+                 <SkeletonCard />
+               </div>
+            ) : (
+                <>
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="card p-4">
+                        <p className="text-text-secondary text-xs mb-1">Income</p>
+                        <p className="text-lg font-bold text-accent-green">+{formatCurrency(monthlyStats.income)}</p>
+                    </div>
+                    <div className="card p-4">
+                        <p className="text-text-secondary text-xs mb-1">Expense</p>
+                        <p className="text-lg font-bold text-accent-red">-{formatCurrency(monthlyStats.expense)}</p>
+                    </div>
+                  </div>
+
+                  {/* Charts */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="card">
+                      <h3 className="font-semibold mb-3">By Category</h3>
+                      {expenseByCategory.length === 0 ? (
+                        <p className="text-text-secondary text-center py-8">No data</p>
+                      ) : (
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={expenseByCategory} dataKey="amount" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`} labelLine={false}>
+                                {expenseByCategory.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                              </Pie>
+                              <Tooltip formatter={(v: number | undefined) => formatCurrency(v ?? 0)} contentStyle={{ backgroundColor: '#1c1c26', border: '1px solid #2a2a38', borderRadius: '8px' }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                    <div className="card">
+                      <h3 className="font-semibold mb-3">Monthly Trend</h3>
+                      {monthlyData.length === 0 ? (
+                        <p className="text-text-secondary text-center py-8">No data</p>
+                      ) : (
+                        <div className="h-48">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={monthlyData}>
+                              <XAxis dataKey="month" tick={{ fill: '#9ca3af', fontSize: 10 }} />
+                              <YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} tickFormatter={(v) => `${v / 1000000}M`} />
+                              <Tooltip formatter={(v: number | undefined) => formatCurrency(v ?? 0)} contentStyle={{ backgroundColor: '#1c1c26', border: '1px solid #2a2a38', borderRadius: '8px' }} />
+                              <Legend />
+                              <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
+                              <Bar dataKey="expense" name="Expense" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Breakdown */}
+                  <div className="card">
+                    <h3 className="font-semibold mb-3">Expense Breakdown</h3>
+                    {expenseByCategory.length === 0 ? (
+                      <p className="text-text-secondary text-center py-4">No data</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {expenseByCategory.map((cat) => {
+                          const pct = monthlyStats.expense > 0 ? (cat.amount / monthlyStats.expense) * 100 : 0;
+                          return (
+                            <div key={cat.name} className="flex items-center gap-3">
+                              <span className="text-xl">{cat.icon}</span>
+                              <div className="flex-1">
+                                <div className="flex justify-between text-sm mb-1">
+                                  <span>{cat.name}</span>
+                                  <span>{formatCurrency(cat.amount)}</span>
+                                </div>
+                                <div className="h-1.5 bg-bg-secondary rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+            )}
+          </div>
+        )}
 
         {/* Quick Add FAB */}
         <button onClick={openModal} className="fab">
