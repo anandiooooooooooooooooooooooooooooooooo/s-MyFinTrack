@@ -7,17 +7,16 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'sm' | 'md' | 'lg';
 }
 
 const maxWidthClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
+  sm: 'max-w-xs',
+  md: 'max-w-sm',
+  lg: 'max-w-md',
 };
 
-export function Modal({ isOpen, onClose, title, children, maxWidth = 'lg' }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, maxWidth = 'md' }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,31 +38,31 @@ export function Modal({ isOpen, onClose, title, children, maxWidth = 'lg' }: Mod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop with subtle blur */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/70 backdrop-blur-md animate-fade-in"
         onClick={onClose}
       />
 
-      {/* Modal */}
+      {/* Modal - Compact & Centered */}
       <div
         ref={modalRef}
-        className={`relative w-full ${maxWidthClasses[maxWidth]} md:mx-4 bg-bg-card border border-border rounded-t-xl md:rounded-xl shadow-2xl animate-scale-in max-h-[90vh] overflow-y-auto`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-bg-card border border-border/50 rounded-2xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] animate-scale-in overflow-hidden`}
       >
-        {/* Header */}
-        <div className="sticky top-0 flex items-center justify-between p-4 border-b border-border bg-bg-card z-10">
-          <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
+        {/* Header - Minimal */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+          <h2 className="text-base font-bold text-text-primary tracking-tight">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-text-muted hover:bg-bg-hover hover:text-text-primary transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-full bg-bg-hover/50 text-text-muted hover:bg-bg-hover hover:text-text-primary transition-all text-sm"
           >
             ✕
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4">{children}</div>
+        {/* Content - Tighter padding */}
+        <div className="px-5 py-4 max-h-[70vh] overflow-y-auto">{children}</div>
       </div>
     </div>
   );

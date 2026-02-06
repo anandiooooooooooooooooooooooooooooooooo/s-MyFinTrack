@@ -128,7 +128,7 @@ export function QuickAddFab() {
             ))}
           </div>
 
-          {/* Amount */}
+          {/* 1. Amount */}
           <div>
             <label className="label">Amount</label>
             <input
@@ -142,7 +142,20 @@ export function QuickAddFab() {
             />
           </div>
 
-          {/* Date */}
+          {/* 2. Notes */}
+          <div>
+            <label className="label">Notes</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="input"
+              placeholder="What's this for?"
+              required
+            />
+          </div>
+
+          {/* 3. Date */}
           <div>
             <label className="label">Date</label>
             <input
@@ -153,7 +166,24 @@ export function QuickAddFab() {
             />
           </div>
 
-          {/* Category */}
+          {/* 4. Account */}
+          <div>
+            <label className="label">Account</label>
+            <select
+              value={accountId}
+              onChange={(e) => setAccountId(e.target.value)}
+              className="input"
+            >
+              <option value="">Select account</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.icon} {acc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 5. Category */}
           <div>
             <label className="label">Category</label>
             {filteredCategories.length === 0 ? (
@@ -177,35 +207,6 @@ export function QuickAddFab() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Account */}
-          <div>
-            <label className="label">Account</label>
-            <select
-              value={accountId}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="input"
-            >
-              <option value="">Select account</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.icon} {acc.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="label">Description (optional)</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="input"
-              placeholder="What's this for?"
-            />
           </div>
 
           {error && (
