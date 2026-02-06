@@ -7,7 +7,7 @@ import { formatCurrency, formatDate, formatNumber, getToday, parseFormattedNumbe
 import type { Account, Category, Transaction, TransactionType } from '@/types';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -44,7 +44,7 @@ interface BudgetItem {
 
 type ViewTab = 'detail' | 'stats';
 
-export default function TransactionsPage() {
+function TransactionsContent() {
   const searchParams = useSearchParams();
   const activeTab = (searchParams.get('view') as ViewTab) || 'detail';
 
@@ -719,5 +719,13 @@ export default function TransactionsPage() {
         </form>
       </Modal>
     </>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense fallback={<div className="p-6 animate-pulse">Loading...</div>}>
+      <TransactionsContent />
+    </Suspense>
   );
 }
