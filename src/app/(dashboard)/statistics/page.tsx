@@ -222,22 +222,22 @@ export default function HomePage() {
         {activeTab === 'overview' && (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <div className="card p-3">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger-in">
+              <div className="stat-card">
                 <p className="text-text-secondary text-[11px] mb-0.5">Balance</p>
                 <p className={`text-base md:text-lg font-bold ${totalBalance >= 0 ? 'text-text-primary' : 'text-accent-red'}`}>
                   {formatCurrency(totalBalance)}
                 </p>
               </div>
-              <div className="card p-3">
+              <div className="stat-card stat-card-income">
                 <p className="text-text-secondary text-[11px] mb-0.5">Income</p>
                 <p className="text-base md:text-lg font-bold text-accent-green">+{formatCurrency(monthlyStats.income)}</p>
               </div>
-              <div className="card p-3">
+              <div className="stat-card stat-card-expense">
                 <p className="text-text-secondary text-[11px] mb-0.5">Expense</p>
                 <p className="text-base md:text-lg font-bold text-accent-red">-{formatCurrency(monthlyStats.expense)}</p>
               </div>
-              <div className="card p-3">
+              <div className="stat-card">
                 <p className="text-text-secondary text-[11px] mb-0.5">Savings</p>
                 <p className={`text-base md:text-lg font-bold ${savingsRate >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>{savingsRate}%</p>
               </div>

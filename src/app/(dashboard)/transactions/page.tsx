@@ -67,6 +67,7 @@ export default function TransactionsPage() {
   // -- Shared / Form State --
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
 
@@ -177,6 +178,19 @@ export default function TransactionsPage() {
   };
 
   const openModal = () => {
+    setEditingId(null);
+    fetchFormData();
+    setShowModal(true);
+  };
+
+  const openEditModal = (txn: Transaction) => {
+    setEditingId(txn.id);
+    setFormType(txn.type);
+    setFormAmount(formatNumber(txn.amount));
+    setFormDate(txn.date);
+    setFormCategoryId(txn.category_id || '');
+    setFormAccountId(txn.account_id || '');
+    setFormDescription(txn.description || '');
     fetchFormData();
     setShowModal(true);
   };
@@ -187,6 +201,7 @@ export default function TransactionsPage() {
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setFormType('expense');
     setFormAmount('');
     setFormDate(getToday());
@@ -231,18 +246,26 @@ export default function TransactionsPage() {
       return;
     }
 
-    const { error: insertError } = await supabase.from('transactions').insert({
+    const txnData = {
       type: formType,
       amount: numAmount,
       date: formDate,
       category_id: formCategoryId || null,
       account_id: formAccountId,
       description: formDescription || null,
-      user_id: user.id,
-    });
+    };
 
-    if (insertError) {
-      setFormError(insertError.message);
+    let error;
+    if (editingId) {
+      const result = await supabase.from('transactions').update(txnData).eq('id', editingId);
+      error = result.error;
+    } else {
+      const result = await supabase.from('transactions').insert({ ...txnData, user_id: user.id });
+      error = result.error;
+    }
+
+    if (error) {
+      setFormError(error.message);
       setFormLoading(false);
       return;
     }
@@ -291,36 +314,37 @@ export default function TransactionsPage() {
       <div className="p-4 md:p-6 space-y-4 animate-fade-in relative pb-24">
 
 
-        {/* Segmented Control View Switcher */}
-        <div className="sticky top-0 z-20 bg-bg-primary/95 backdrop-blur-md -mx-4 px-4 py-3 md:static md:mx-0 md:px-0 md:bg-transparent border-b border-border/50 md:border-none flex justify-center">
-          <div className="bg-bg-secondary p-1 rounded-xl flex items-center border border-border/50 shadow-inner max-w-xs w-full">
-             <Link
-               href="/transactions?view=detail"
-               className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                 activeTab === 'detail'
-                   ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-border/50'
-                   : 'text-text-secondary hover:text-text-primary'
-               }`}
-             >
-               📝 History
-             </Link>
-             <Link
-               href="/transactions?view=stats"
-               className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
-                 activeTab === 'stats'
-                   ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-border/50'
-                   : 'text-text-secondary hover:text-text-primary'
-               }`}
-             >
-               📊 Statistics
-             </Link>
-          </div>
-        </div>
+        {/* Unified Sticky Header: Segmented Control + Date Filters */}
+        <div className="sticky top-0 z-20 bg-bg-primary/95 backdrop-blur-md -mx-4 px-4 py-3 md:mx-0 md:px-0 md:bg-transparent border-b border-border/50 md:border-none space-y-4">
 
-        {/* Unified Date Filters */}
-        <div className="sticky top-14 md:top-0 z-10 bg-bg-primary/95 backdrop-blur-md -mx-4 px-4 py-3 md:mx-0 md:px-0 md:bg-transparent space-y-4 border-b border-border/50 md:border-none mt-0">
+          {/* Segmented Control */}
+          <div className="flex justify-center">
+            <div className="bg-bg-secondary p-1 rounded-xl flex items-center border border-border/50 shadow-inner max-w-xs w-full">
+               <Link
+                 href="/transactions?view=detail"
+                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                   activeTab === 'detail'
+                     ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-border/50'
+                     : 'text-text-secondary hover:text-text-primary'
+                 }`}
+               >
+                 📝 History
+               </Link>
+               <Link
+                 href="/transactions?view=stats"
+                 className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all duration-300 ${
+                   activeTab === 'stats'
+                     ? 'bg-bg-card text-text-primary shadow-sm ring-1 ring-border/50'
+                     : 'text-text-secondary hover:text-text-primary'
+                 }`}
+               >
+                 📊 Statistics
+               </Link>
+            </div>
+          </div>
+
+          {/* Date Filters */}
           <div className="flex flex-col md:flex-row gap-2 md:items-center justify-between">
-            {/* Date Filters */}
             <div className="flex gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
               <select
                 value={filterMonth}
@@ -340,7 +364,7 @@ export default function TransactionsPage() {
                   <option key={y} value={y}>{y}</option>
                 ))}
               </select>
-                <select
+              <select
                 value={filterDay ?? ''}
                 onChange={(e) => setFilterDay(e.target.value ? parseInt(e.target.value) : null)}
                 className="input w-auto text-sm"
@@ -352,39 +376,32 @@ export default function TransactionsPage() {
               </select>
             </div>
 
-            {/* Type Filter (History Only) */}
+            {/* Filter by Type & Search */}
             {activeTab === 'detail' && (
-               <div className="flex gap-1 bg-bg-card p-1 rounded-lg self-start md:self-auto">
-                {(['all', 'income', 'expense'] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setFilter(type)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                      filter === type
-                        ? 'bg-bg-hover text-text-primary shadow-sm'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
-                  >
-                   {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </button>
-                ))}
+              <div className="flex gap-2 w-full md:w-auto">
+                 <div className="flex p-1 bg-bg-secondary rounded-lg border border-border/50 shrink-0">
+                    {(['all', 'income', 'expense'] as const).map((f) => (
+                      <button
+                        key={f}
+                         onClick={() => setFilter(f)}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
+                          filter === f ? 'bg-bg-card text-text-primary shadow-sm' : 'text-text-secondary hover:text-text-primary'
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                 </div>
+                 <input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="input py-1.5 text-sm w-full md:w-48"
+                 />
               </div>
             )}
           </div>
-
-          {/* Search Bar (History Only) */}
-          {activeTab === 'detail' && (
-             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">🔍</span>
-              <input
-                type="text"
-                placeholder="Search transactions..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="input pl-9 pr-4"
-              />
-            </div>
-          )}
         </div>
 
         {activeTab === 'detail' && (
@@ -449,16 +466,28 @@ export default function TransactionsPage() {
                                {txn.account?.icon && <span>{txn.account.icon}</span>}
                                <span>{txn.account?.name}</span>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(txn.id);
-                              }}
-                              className="md:opacity-0 group-hover:opacity-100 p-1 -mr-1 text-text-muted hover:text-accent-red hover:bg-accent-red/10 rounded-lg transition-all"
-                              title="Delete transaction"
-                            >
-                              ✕
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditModal(txn);
+                                }}
+                                className="md:opacity-0 group-hover:opacity-100 p-1 text-text-muted hover:text-accent-blue hover:bg-accent-blue/10 rounded-lg transition-all"
+                                title="Edit transaction"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDelete(txn.id);
+                                }}
+                                className="md:opacity-0 group-hover:opacity-100 p-1 text-text-muted hover:text-accent-red hover:bg-accent-red/10 rounded-lg transition-all"
+                                title="Delete transaction"
+                              >
+                                ✕
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -482,11 +511,11 @@ export default function TransactionsPage() {
                 <>
                   {/* Summary Cards */}
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="card p-4">
+                    <div className="stat-card stat-card-income">
                         <p className="text-text-secondary text-xs mb-1">Income</p>
                         <p className="text-lg font-bold text-accent-green">+{formatCurrency(monthlyStats.income)}</p>
                     </div>
-                    <div className="card p-4">
+                    <div className="stat-card stat-card-expense">
                         <p className="text-text-secondary text-xs mb-1">Expense</p>
                         <p className="text-lg font-bold text-accent-red">-{formatCurrency(monthlyStats.expense)}</p>
                     </div>
@@ -494,7 +523,7 @@ export default function TransactionsPage() {
 
                   {/* Charts */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="card">
+                    <div className="chart-container">
                       <h3 className="font-semibold mb-3">By Category</h3>
                       {expenseByCategory.length === 0 ? (
                         <p className="text-text-secondary text-center py-8">No data</p>
@@ -570,8 +599,8 @@ export default function TransactionsPage() {
         </button>
       </div>
 
-      {/* Add Transaction Modal */}
-      <Modal isOpen={showModal} onClose={closeModal} title="Add Transaction">
+      {/* Add/Edit Transaction Modal */}
+      <Modal isOpen={showModal} onClose={closeModal} title={editingId ? 'Edit Transaction' : 'Add Transaction'}>
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Type Toggle */}
           <div className="flex rounded-lg overflow-hidden border border-border">

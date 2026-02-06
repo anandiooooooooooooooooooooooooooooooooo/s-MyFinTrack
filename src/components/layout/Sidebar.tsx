@@ -43,7 +43,7 @@ export function Sidebar() {
       <>
         {/* Mobile Header */}
         <header className="fixed top-0 left-0 right-0 h-14 bg-bg-secondary/80 backdrop-blur-md border-b border-border/50 flex items-center justify-center px-4 z-50">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold text-white">
             Retire Early
           </h1>
         </header>
@@ -64,15 +64,15 @@ export function Sidebar() {
                     : 'text-text-muted hover:text-text-primary'
                 )}
               >
-                <div className={cn("p-1 rounded-xl transition-all duration-300", isActive ? "bg-accent-blue/10 shadow-[0_0_15px_rgba(59,130,246,0.3)]" : "")}>
+                <div className={cn("p-1 rounded-xl transition-all duration-300", isActive ? "bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.2)]" : "")}>
                   <span className={cn("text-xl transition-transform", isActive ? "scale-105" : "")}>{item.icon}</span>
                 </div>
-                <span className={cn("text-[9px] font-medium transition-opacity", isActive ? "text-accent-blue font-bold" : "opacity-80")}>
+                <span className={cn("text-[9px] font-medium transition-opacity", isActive ? "text-white font-bold" : "opacity-80")}>
                   {item.label}
                 </span>
 
                 {isActive && (
-                    <span className="absolute -bottom-1 w-1 h-1 bg-accent-blue rounded-full" />
+                    <span className="absolute -bottom-1 w-1 h-1 bg-white rounded-full" />
                 )}
               </Link>
             );
@@ -87,7 +87,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 h-screen w-64 bg-bg-secondary/50 backdrop-blur-xl border-r border-border flex flex-col z-40">
       {/* Logo */}
       <div className="h-16 flex items-center px-6 border-b border-border/50">
-        <h1 className="text-2xl font-bold bg-gradient-to-r from-accent-blue via-accent-purple to-accent-purple bg-clip-text text-transparent">
+        <h1 className="text-2xl font-bold text-white">
           Retire Early
         </h1>
       </div>
@@ -104,7 +104,7 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group',
                 isActive
-                  ? 'bg-gradient-to-r from-accent-blue/10 to-accent-purple/5 text-accent-blue border border-accent-blue/20 shadow-[0_0_20px_rgba(59,130,246,0.15)]'
+                  ? 'bg-white/10 text-white border border-white/20 shadow-[0_0_20px_rgba(255,255,255,0.1)]'
                   : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
               )}
             >
@@ -114,7 +114,7 @@ export function Sidebar() {
               <span className="font-semibold tracking-wide">{item.label}</span>
 
               {isActive && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent-blue shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
               )}
             </Link>
           );
