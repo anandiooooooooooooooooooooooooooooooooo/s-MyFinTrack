@@ -346,7 +346,7 @@ export default function AccountsPage() {
         <div className="card mt-6">
           <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
             🏷️ Categories
-          </h3>
+           </h3>
 
           {/* Category Filters - Full Width */}
           <div className="flex gap-2 mb-4">
