@@ -1,69 +1,71 @@
-'use client';
+"use client";
 
-import { Modal } from '@/components/ui';
-import { createClient } from '@/lib/supabase/client';
-import { formatNumber, getToday, parseFormattedNumber } from '@/lib/utils';
-import type { Account, Category, TransactionType } from '@/types';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Modal } from "@/components/ui/Modal";
+import { createClient } from "@/lib/supabase/client";
+import { formatNumber, getToday, parseFormattedNumber } from "@/lib/utils";
+import type { Account, Category, TransactionType } from "@/types";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function QuickAddFab() {
   const [showModal, setShowModal] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
-  // Form state
-  const [type, setType] = useState<TransactionType>('expense');
-  const [amount, setAmount] = useState('');
+  const [type, setType] = useState<TransactionType>("expense");
+  const [amount, setAmount] = useState("");
   const [date, setDate] = useState(getToday());
-  const [categoryId, setCategoryId] = useState('');
-  const [accountId, setAccountId] = useState('');
-  const [description, setDescription] = useState('');
+  const [categoryId, setCategoryId] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [description, setDescription] = useState("");
 
-  useEffect(() => {
-    if (showModal) {
-      fetchData();
-    }
-  }, [showModal]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const [{ data: cats }, { data: accs }] = await Promise.all([
-      supabase.from('categories').select('*').order('name'),
-      supabase.from('accounts').select('*').order('name'),
+      supabase.from("categories").select("*").order("name"),
+      supabase.from("accounts").select("*").order("name"),
     ]);
     setCategories(cats || []);
     setAccounts(accs || []);
     if (accs && accs.length > 0 && !accountId) setAccountId(accs[0].id);
-  };
+  }, [supabase, accountId]);
+
+  useEffect(() => {
+    if (showModal) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      void fetchData();
+    }
+  }, [showModal, fetchData]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/\D/g, '');
-    setAmount(val ? formatNumber(parseInt(val)) : '');
+    const val = e.target.value.replace(/\D/g, "");
+    setAmount(val ? formatNumber(parseInt(val)) : "");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     if (!amount || parseFormattedNumber(amount) <= 0) {
-      setError('Enter an amount');
+      setError("Enter an amount");
       setLoading(false);
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      setError('Not logged in');
+      setError("Not logged in");
       setLoading(false);
       return;
     }
 
-    const { error: insertError } = await supabase.from('transactions').insert({
+    const { error: insertError } = await supabase.from("transactions").insert({
       type,
       amount: parseFormattedNumber(amount),
       date,
@@ -86,19 +88,18 @@ export function QuickAddFab() {
   };
 
   const resetForm = () => {
-    setType('expense');
-    setAmount('');
+    setType("expense");
+    setAmount("");
     setDate(getToday());
-    setCategoryId('');
-    setDescription('');
-    setError('');
+    setCategoryId("");
+    setDescription("");
+    setError("");
   };
 
   const filteredCategories = categories.filter((c) => c.type === type);
 
   return (
     <>
-      {/* FAB Button */}
       <button
         onClick={() => setShowModal(true)}
         className="fab"
@@ -107,28 +108,34 @@ export function QuickAddFab() {
         +
       </button>
 
-      {/* Transaction Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add Transaction">
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Add Transaction"
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Type Toggle */}
           <div className="flex rounded-lg overflow-hidden border border-border">
-            {(['income', 'expense'] as const).map((t) => (
+            {(["income", "expense"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
-                onClick={() => { setType(t); setCategoryId(''); }}
+                onClick={() => {
+                  setType(t);
+                  setCategoryId("");
+                }}
                 className={`flex-1 py-3 font-medium transition-all ${
                   type === t
-                    ? t === 'expense' ? 'bg-accent-red text-white' : 'bg-accent-green text-white'
-                    : 'bg-bg-secondary text-text-secondary'
+                    ? t === "expense"
+                      ? "bg-accent-red text-white"
+                      : "bg-accent-green text-white"
+                    : "bg-bg-secondary text-text-secondary"
                 }`}
               >
-                {t === 'expense' ? '💸 Expense' : '💰 Income'}
+                {t === "expense" ? "💸 Expense" : "💰 Income"}
               </button>
             ))}
           </div>
 
-          {/* 1. Amount */}
           <div>
             <label className="label">Amount</label>
             <input
@@ -142,7 +149,6 @@ export function QuickAddFab() {
             />
           </div>
 
-          {/* 2. Notes */}
           <div>
             <label className="label">Notes</label>
             <input
@@ -155,7 +161,6 @@ export function QuickAddFab() {
             />
           </div>
 
-          {/* 3. Date */}
           <div>
             <label className="label">Date</label>
             <input
@@ -166,7 +171,6 @@ export function QuickAddFab() {
             />
           </div>
 
-          {/* 4. Account */}
           <div>
             <label className="label">Account</label>
             <select
@@ -183,7 +187,6 @@ export function QuickAddFab() {
             </select>
           </div>
 
-          {/* 5. Category */}
           <div>
             <label className="label">Category</label>
             {filteredCategories.length === 0 ? (
@@ -197,8 +200,8 @@ export function QuickAddFab() {
                     onClick={() => setCategoryId(cat.id)}
                     className={`flex flex-col items-center gap-1 p-2 rounded-lg text-center transition-all ${
                       categoryId === cat.id
-                        ? 'bg-accent-blue/20 border-2 border-accent-blue'
-                        : 'bg-bg-secondary border border-border hover:bg-bg-hover'
+                        ? "bg-accent-blue/20 border-2 border-accent-blue"
+                        : "bg-bg-secondary border border-border hover:bg-bg-hover"
                     }`}
                   >
                     <span className="text-xl">{cat.icon}</span>
@@ -213,17 +216,20 @@ export function QuickAddFab() {
             <p className="text-accent-red text-sm text-center">{error}</p>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost flex-1">
+            <button
+              type="button"
+              onClick={() => setShowModal(false)}
+              className="btn btn-ghost flex-1"
+            >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className={`btn flex-1 ${type === 'expense' ? 'btn-danger' : 'btn-success'}`}
+              className={`btn flex-1 ${type === "expense" ? "btn-danger" : "btn-success"}`}
             >
-              {loading ? 'Saving...' : 'Add'}
+              {loading ? "Saving..." : "Add"}
             </button>
           </div>
         </form>

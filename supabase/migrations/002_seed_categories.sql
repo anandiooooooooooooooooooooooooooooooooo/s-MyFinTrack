@@ -1,8 +1,6 @@
--- Trigger function to seed default categories when a new user signs up
 CREATE OR REPLACE FUNCTION public.handle_new_user_categories()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Insert default expense categories
   INSERT INTO public.categories (name, type, icon, color, user_id) VALUES
     ('Food & Dining', 'expense', '🍔', '#ef4444', NEW.id),
     ('Transportation', 'expense', '🚗', '#f97316', NEW.id),
@@ -13,7 +11,6 @@ BEGIN
     ('Education', 'expense', '📚', '#8b5cf6', NEW.id),
     ('Other', 'expense', '📦', '#6b7280', NEW.id);
 
-  -- Insert default income categories
   INSERT INTO public.categories (name, type, icon, color, user_id) VALUES
     ('Salary', 'income', '💰', '#10b981', NEW.id),
     ('Freelance', 'income', '💻', '#14b8a6', NEW.id),
@@ -24,8 +21,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Create trigger on auth.users table
--- This fires after a new user is inserted into Supabase Auth
 DROP TRIGGER IF EXISTS on_auth_user_created_categories ON auth.users;
 CREATE TRIGGER on_auth_user_created_categories
   AFTER INSERT ON auth.users

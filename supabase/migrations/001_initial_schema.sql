@@ -1,10 +1,4 @@
--- Personal Finance Tracker Database Schema
--- Run this in your Supabase SQL Editor
-
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Accounts table
 CREATE TABLE IF NOT EXISTS accounts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
@@ -15,7 +9,6 @@ CREATE TABLE IF NOT EXISTS accounts (
   user_id UUID REFERENCES auth.users NOT NULL
 );
 
--- Categories table
 CREATE TABLE IF NOT EXISTS categories (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
@@ -26,7 +19,6 @@ CREATE TABLE IF NOT EXISTS categories (
   user_id UUID REFERENCES auth.users NOT NULL
 );
 
--- Transactions table
 CREATE TABLE IF NOT EXISTS transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -39,7 +31,6 @@ CREATE TABLE IF NOT EXISTS transactions (
   user_id UUID REFERENCES auth.users NOT NULL
 );
 
--- Transfers table
 CREATE TABLE IF NOT EXISTS transfers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -51,13 +42,11 @@ CREATE TABLE IF NOT EXISTS transfers (
   user_id UUID REFERENCES auth.users NOT NULL
 );
 
--- Row Level Security (RLS)
 ALTER TABLE accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transfers ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies - Users can only access their own data
 CREATE POLICY "Users can view own accounts" ON accounts FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own accounts" ON accounts FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update own accounts" ON accounts FOR UPDATE USING (auth.uid() = user_id);
@@ -78,7 +67,6 @@ CREATE POLICY "Users can insert own transfers" ON transfers FOR INSERT WITH CHEC
 CREATE POLICY "Users can update own transfers" ON transfers FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own transfers" ON transfers FOR DELETE USING (auth.uid() = user_id);
 
--- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions(user_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_account ON transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category_id);

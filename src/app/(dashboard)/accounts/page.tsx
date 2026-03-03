@@ -1,6 +1,6 @@
 "use client";
 
-import { Modal } from "@/components/ui";
+import { Modal } from "@/components/ui/Modal";
 import { createClient } from "@/lib/supabase/client";
 import {
   accountTypeIcons,
@@ -17,7 +17,7 @@ import type {
   Category,
   CategoryType,
 } from "@/types";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const accountTypes: { value: AccountType; label: string }[] = [
   { value: "bank", label: "Bank Account" },
@@ -50,9 +50,8 @@ export default function AccountsPage() {
   const [accounts, setAccounts] = useState<AccountBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
-  // Form state
   const [formName, setFormName] = useState("");
   const [formType, setFormType] = useState<AccountType>("bank");
   const [formInitialBalance, setFormInitialBalance] = useState("");
@@ -60,12 +59,6 @@ export default function AccountsPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
 
-  useEffect(() => {
-    fetchAccounts();
-    fetchCategories();
-  }, []);
-
-  // Categories state
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<
     "all" | "income" | "expense"
@@ -79,18 +72,31 @@ export default function AccountsPage() {
   const [catFormLoading, setCatFormLoading] = useState(false);
   const [catFormError, setCatFormError] = useState("");
 
-  const fetchCategories = async () => {
+  type AccountBalanceRpcRow = {
+    id: string;
+    name: string;
+    type: AccountType;
+    initial_balance: number | string;
+    icon: string;
+    created_at: string;
+    user_id: string;
+    balance: number | string;
+  };
+
+  const fetchCategories = useCallback(async () => {
     const { data } = await supabase
       .from("categories")
       .select("*")
       .order("name");
     setCategories(data || []);
-  };
+  }, [supabase]);
 
-  const filteredCategories = categories.filter((cat) => {
-    if (categoryFilter === "all") return true;
-    return cat.type === categoryFilter;
-  });
+  const filteredCategories = useMemo(() => {
+    return categories.filter((cat) => {
+      if (categoryFilter === "all") return true;
+      return cat.type === categoryFilter;
+    });
+  }, [categories, categoryFilter]);
 
   const handleCatBudgetChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "");
@@ -157,37 +163,37 @@ export default function AccountsPage() {
     setCategories(categories.filter((c) => c.id !== id));
   };
 
-  const fetchAccounts = async () => {
-    const { data: accountsData } = await supabase
-      .from("accounts")
-      .select("*")
-      .order("created_at", { ascending: true });
+  const fetchAccounts = useCallback(async () => {
+    const { data, error } = await supabase.rpc("get_account_balances");
 
-    if (accountsData) {
-      const balances = await Promise.all(
-        accountsData.map(async (account: Account) => {
-          const { data: txns } = await supabase
-            .from("transactions")
-            .select("type, amount")
-            .eq("account_id", account.id);
-
-          let balance = account.initial_balance;
-          txns?.forEach((txn: { type: string; amount: number }) => {
-            if (txn.type === "income") {
-              balance += txn.amount;
-            } else {
-              balance -= txn.amount;
-            }
-          });
-
-          return { account, balance };
-        }),
-      );
-      setAccounts(balances);
+    if (error || !data) {
+      setAccounts([]);
+      setLoading(false);
+      return;
     }
 
+    const balances = (data as AccountBalanceRpcRow[]).map((row) => ({
+      account: {
+        id: row.id,
+        name: row.name,
+        type: row.type,
+        initial_balance: Number(row.initial_balance ?? 0),
+        icon: row.icon,
+        created_at: row.created_at,
+        user_id: row.user_id,
+      } as Account,
+      balance: Number(row.balance ?? 0),
+    }));
+
+    setAccounts(balances);
+
     setLoading(false);
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void Promise.all([fetchAccounts(), fetchCategories()]);
+  }, [fetchAccounts, fetchCategories]);
 
   const openModal = () => {
     setShowModal(true);
@@ -280,8 +286,7 @@ export default function AccountsPage() {
   return (
     <>
       <div className="p-6 space-y-6 animate-fade-in">
-        {/* Total Balance Card */}
-        <div className="stat-card bg-gradient-to-br from-accent-blue/10 to-accent-purple/10 border-accent-blue/20">
+        <div className="stat-card bg-linear-to-br from-accent-blue/10 to-accent-purple/10 border-accent-blue/20">
           <p className="text-text-secondary text-sm mb-1">Total Balance</p>
           <p
             className={`text-3xl font-bold ${totalBalance >= 0 ? "text-text-primary" : "text-accent-red"}`}
@@ -290,14 +295,12 @@ export default function AccountsPage() {
           </p>
         </div>
 
-        {/* Accounts Grid */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 stagger-in">
           {accounts.map(({ account, balance }) => (
             <div
               key={account.id}
               className="account-card group relative aspect-square flex flex-col items-center justify-center text-center"
             >
-              {/* Delete Button */}
               <button
                 onClick={() => handleDelete(account.id)}
                 className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 text-text-muted hover:text-accent-red transition-all"
@@ -305,12 +308,10 @@ export default function AccountsPage() {
                 🗑️
               </button>
 
-              {/* Icon */}
               <div className="w-14 h-14 rounded-full bg-bg-secondary flex items-center justify-center text-3xl mb-3">
                 {account.icon}
               </div>
 
-              {/* Name & Type */}
               <h3 className="font-semibold text-text-primary text-sm mb-0.5">
                 {account.name}
               </h3>
@@ -319,7 +320,6 @@ export default function AccountsPage() {
                 {getAccountTypeLabel(account.type)}
               </p>
 
-              {/* Balance */}
               <p
                 className={`text-lg font-bold ${balance >= 0 ? "text-text-primary" : "text-accent-red"}`}
               >
@@ -328,7 +328,6 @@ export default function AccountsPage() {
             </div>
           ))}
 
-          {/* Add Account Tile */}
           <button
             onClick={openModal}
             className="aspect-square rounded-2xl border-2 border-dashed border-border/50 bg-transparent flex flex-col items-center justify-center text-center hover:border-accent-blue/50 hover:bg-accent-blue/5 transition-all cursor-pointer group"
@@ -342,13 +341,11 @@ export default function AccountsPage() {
           </button>
         </div>
 
-        {/* Categories Section */}
         <div className="card mt-6">
           <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
             🏷️ Categories
-           </h3>
+          </h3>
 
-          {/* Category Filters - Full Width */}
           <div className="flex gap-2 mb-4">
             {(["all", "expense", "income"] as const).map((type) => (
               <button
@@ -365,16 +362,18 @@ export default function AccountsPage() {
             ))}
           </div>
 
-          {/* Add Category Tile */}
           <button
             onClick={openCategoryModal}
             className="w-full p-3 mb-4 rounded-xl border-2 border-dashed border-border/50 bg-transparent hover:border-accent-blue/50 hover:bg-accent-blue/5 transition-all flex items-center justify-center gap-2 group"
           >
-            <span className="text-xl group-hover:scale-110 transition-transform">➕</span>
-            <span className="text-sm font-medium text-text-secondary group-hover:text-accent-blue transition-all">Add Category</span>
+            <span className="text-xl group-hover:scale-110 transition-transform">
+              ➕
+            </span>
+            <span className="text-sm font-medium text-text-secondary group-hover:text-accent-blue transition-all">
+              Add Category
+            </span>
           </button>
 
-          {/* Categories Grid */}
           {filteredCategories.length === 0 ? (
             <div className="text-center py-8 text-text-secondary">
               <p>No categories found</p>
@@ -418,10 +417,8 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      {/* Add Account Modal */}
       <Modal isOpen={showModal} onClose={closeModal} title="Add Account">
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Icon Selector */}
           <div>
             <label className="label">Icon</label>
             <div className="flex gap-2 flex-wrap">
@@ -442,7 +439,6 @@ export default function AccountsPage() {
             </div>
           </div>
 
-          {/* Account Name */}
           <div>
             <label className="label">Account Name</label>
             <input
@@ -455,7 +451,6 @@ export default function AccountsPage() {
             />
           </div>
 
-          {/* Account Type */}
           <div>
             <label className="label">Type</label>
             <div className="grid grid-cols-3 gap-2">
@@ -479,7 +474,6 @@ export default function AccountsPage() {
             </div>
           </div>
 
-          {/* Initial Balance */}
           <div>
             <label className="label">Initial Balance (IDR)</label>
             <input
@@ -500,7 +494,6 @@ export default function AccountsPage() {
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
@@ -520,14 +513,12 @@ export default function AccountsPage() {
         </form>
       </Modal>
 
-      {/* Add Category Modal */}
       <Modal
         isOpen={showCategoryModal}
         onClose={closeCategoryModal}
         title="Add Category"
       >
         <form onSubmit={handleCategorySubmit} className="space-y-4">
-          {/* Type Toggle */}
           <div className="flex rounded-lg overflow-hidden border border-border">
             {(["expense", "income"] as const).map((t) => (
               <button
@@ -547,7 +538,6 @@ export default function AccountsPage() {
             ))}
           </div>
 
-          {/* Icon Selector */}
           <div>
             <label className="label">Icon</label>
             <div className="flex gap-1.5 flex-wrap">
@@ -568,7 +558,6 @@ export default function AccountsPage() {
             </div>
           </div>
 
-          {/* Color Selector */}
           <div>
             <label className="label">Color</label>
             <div className="flex gap-2 flex-wrap">
@@ -584,7 +573,6 @@ export default function AccountsPage() {
             </div>
           </div>
 
-          {/* Category Name */}
           <div>
             <label className="label">Category Name</label>
             <input
@@ -597,7 +585,6 @@ export default function AccountsPage() {
             />
           </div>
 
-          {/* Budget Limit (only for expense) */}
           {catFormType === "expense" && (
             <div>
               <label className="label">Monthly Budget (optional)</label>
@@ -617,7 +604,6 @@ export default function AccountsPage() {
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"

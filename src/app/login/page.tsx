@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -29,24 +29,20 @@ export default function LoginPage() {
       return;
     }
 
-    router.push('/dashboard');
+    router.push("/dashboard");
     router.refresh();
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-primary px-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-linear-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
             FinTrack
           </h1>
-          <p className="text-text-secondary mt-2">
-            Personal Finance Tracker
-          </p>
+          <p className="text-text-secondary mt-2">Personal Finance Tracker</p>
         </div>
 
-        {/* Login Card */}
         <div className="card">
           <h2 className="text-xl font-semibold text-text-primary mb-6">
             Welcome back
@@ -72,7 +68,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input"
-                placeholder="••••••••" 
+                placeholder="••••••••"
                 required
               />
             </div>
@@ -88,12 +84,12 @@ export default function LoginPage() {
               disabled={loading}
               className="btn btn-primary w-full"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
           <div className="mt-6 text-center text-text-secondary text-sm">
-            Don&apos;t have an account?{' '}
+            Don&apos;t have an account?{" "}
             <Link href="/register" className="text-accent-blue hover:underline">
               Sign up
             </Link>

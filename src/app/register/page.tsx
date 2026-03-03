@@ -1,30 +1,30 @@
-'use client';
+"use client";
 
-import { createClient } from '@/lib/supabase/client';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
@@ -41,25 +41,20 @@ export default function RegisterPage() {
       return;
     }
 
-    // Redirect to dashboard after successful registration
-    router.push('/dashboard');
+    router.push("/dashboard");
     router.refresh();
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg-primary px-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-linear-to-r from-accent-blue to-accent-purple bg-clip-text text-transparent">
             FinTrack
           </h1>
-          <p className="text-text-secondary mt-2">
-            Personal Finance Tracker
-          </p>
+          <p className="text-text-secondary mt-2">Personal Finance Tracker</p>
         </div>
 
-        {/* Register Card */}
         <div className="card">
           <h2 className="text-xl font-semibold text-text-primary mb-6">
             Create your account
@@ -113,12 +108,12 @@ export default function RegisterPage() {
               disabled={loading}
               className="btn btn-primary w-full"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? "Creating account..." : "Create Account"}
             </button>
           </form>
 
           <div className="mt-6 text-center text-text-secondary text-sm">
-            Already have an account?{' '}
+            Already have an account?{" "}
             <Link href="/login" className="text-accent-blue hover:underline">
               Sign in
             </Link>
